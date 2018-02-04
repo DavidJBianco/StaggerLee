@@ -5,6 +5,7 @@
 
 // load all the configurations, calibrations and settings for the bot
 #include "config.h"
+#include <Time.h>
 
 void init_motors() {
   pinMode(PIN_SPEED_RIGHT, OUTPUT);
@@ -23,6 +24,14 @@ void init_led() {
   led_off();
 }
 
+// Initialize the random number generator. The standard Arduino way is to read a
+// value from an unconnected analog pin, thereby getting an unpredictable value
+// with which to seed the PRNG.  This isn't that unpredictable on the NodeMCU
+// dev boards, but it's probably good enough for our purposes.
+void init_random() {
+  randomSeed(analogRead(A0));
+}
+
 void led_on() {
   digitalWrite(PIN_LED, HIGH);
 }
@@ -31,18 +40,47 @@ void led_off() {
   digitalWrite(PIN_LED, LOW);
 }
 
-int get_distance() {
+bool distance_outlier(int last_distance, int new_distance) {
+  if(abs(last_distance - new_distance) > 20) {
+    Serial.print("Outlier: ");
+    Serial.println(abs(last_distance - new_distance));
+    return true;
+  } else {
+    return false;
+  }
+}
 
+int get_distance_smoothed() {
+  int distance, return_distance;
+  static int previous_distance = INFINITE_DISTANCE;
+
+  distance = get_distance();
+
+  if(previous_distance == INFINITE_DISTANCE) {
+    previous_distance = distance;
+    return distance;
+  } else {
+    if(! distance_outlier(previous_distance, distance)) {
+      previous_distance = distance;
+      return distance;
+    } else {
+      previous_distance = distance;
+      return INFINITE_DISTANCE;
+    }
+  }
+}
+
+int get_distance() {
   int duration = 0;
   int distance = 0;
 
   // Just in case, make sure we start measuring with sensor turned OFF
   digitalWrite(PIN_RANGE_TRIGGER, LOW);
-  delayMicroseconds(5);
+  delayMicroseconds(2);
 
   // Send the sound pulse
   digitalWrite(PIN_RANGE_TRIGGER, HIGH);
-  delayMicroseconds(15);
+  delayMicroseconds(10);
 
   // Turn off the sound
   digitalWrite(PIN_RANGE_TRIGGER, LOW);
@@ -54,26 +92,9 @@ int get_distance() {
   // temperature and humidity to get an accurate reading, as well as calibrate
   // the sensor.  But for this robot, this will be good enough.
   distance = duration / 58.2;
+  distance = distance + DISTANCE_CALIBRATION;
 
-  if ((distance > MAX_RANGE) || (distance <= MIN_RANGE)) {
-    return(INFINITE_DISTANCE);
-  } else {
-    return(distance + DISTANCE_CALIBRATION);
-  }
-}
-
-// The data from the HC-SR04 ultrasonic distance sensor can be kind of "noisy",
-// frequently returning spurious high or low values.  Therefore, we take three
-// readings and average them.  This helps smooth out the problems and gives a
-// more reliable reading.
-int get_distance_avg() {
-  int d1, d2, d3;
-
-  d1 = get_distance();
-  d2 = get_distance();
-  d3 = get_distance();
-
-  return( (d1 + d2 + d3) / 3 );
+  return distance;
 }
 
 void stop() {
@@ -111,13 +132,26 @@ void left(int speed) {
   analogWrite(PIN_SPEED_LEFT, speed);
 }
 
+// Randomly turn either right or left
+void random_turn(int speed) {
+  int direction;
+
+  direction = random(1,3);
+
+  if(direction == 1) {
+    left(speed);
+  } else {
+    right(speed);
+  }
+}
+
 void collide() {
   if (SERIAL_DEBUGGING) {
     Serial.println("COLLISION!");
   }
 
   stop();
-  right(SPEED_MEDIUM);
+  random_turn(SPEED_MEDIUM);
   delay(250);
   stop();
 }
@@ -127,6 +161,7 @@ void setup() {
     Serial.begin(9600);
   }
 
+  init_random();
   init_motors();
   init_distance_sensor();
   init_led();
@@ -134,11 +169,26 @@ void setup() {
 }
 
 void loop() {
+
   int distance;
 
-  distance = get_distance_avg();
+  /*
+  while(1){
+    distance = get_distance_smoothed();
+    Serial.println(distance);
+    delay(MAIN_LOOP_DELAY);
+  }
+  */
 
-  if (distance < TURN_DISTANCE) {
+  distance = get_distance_smoothed();
+
+  Serial.println(distance);
+
+  if(distance <= BACK_DISTANCE) {
+    led_on();
+    backward(SPEED_HIGH);
+    delay(500);
+  } else if(distance <= TURN_DISTANCE) {
     led_on();
     collide();
   } else {

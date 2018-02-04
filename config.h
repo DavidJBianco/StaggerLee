@@ -27,10 +27,12 @@
 #define LEFT_CALIBRATION 0
 
 // Set to 0 to disable serial debugging
-#define SERIAL_DEBUGGING 0
+#define SERIAL_DEBUGGING 1
 
-// Don't get too close to things!  This is in cm
-#define TURN_DISTANCE 15
+// Don't get too close to things!  These are measured in centimeters
+#define TURN_DISTANCE 25
+#define BACK_DISTANCE 10
+
 
 // How often to run the main loop, in milliseconds
-#define MAIN_LOOP_DELAY 250
+#define MAIN_LOOP_DELAY 150
