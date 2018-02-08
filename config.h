@@ -1,6 +1,5 @@
 // The following are the pins for the distance sensor
-#define PIN_RANGE_ECHO 13 // Echo Pin
-#define PIN_RANGE_TRIGGER 12 // Trigger Pin
+#define PIN_FORWARD_SENSOR 13 // Echo Pin
 #define PIN_LED  16 // Onboard LED
 
 // Pins for the motors
@@ -9,11 +8,8 @@
 #define PIN_SPEED_RIGHT  4
 #define PIN_DIR_RIGHT    2
 
-// Calibration for the distance sensor
-#define MAX_RANGE 400 // Maximum range needed
-#define MIN_RANGE 0 // Minimum range needed
-#define DISTANCE_CALIBRATION 0 // "fudge factor" for distance sensork
-#define INFINITE_DISTANCE 1000
+// sensor settings
+#define OBSTACLE HIGH
 
 // Speed settings for the motors
 #define SPEED_STOP 0
@@ -28,11 +24,6 @@
 
 // Set to 0 to disable serial debugging
 #define SERIAL_DEBUGGING 1
-
-// Don't get too close to things!  These are measured in centimeters
-#define TURN_DISTANCE 25
-#define BACK_DISTANCE 10
-
 
 // How often to run the main loop, in milliseconds
 #define MAIN_LOOP_DELAY 150
